@@ -9,7 +9,7 @@ import (
 type ctxKey string
 
 const (
-	requestIDKey ctxKey = "request_id"
+	requestIDKey ctxKey = "common.contextx.request_id"
 )
 
 func SetRequestID(ctx context.Context, id string) context.Context {
