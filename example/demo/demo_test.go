@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/double12gzh/zap-demo/common/middleware"
+	"github.com/double12gzh/zap-demo/router/middleware"
 )
 
 func TestConcurrentPing(t *testing.T) {
