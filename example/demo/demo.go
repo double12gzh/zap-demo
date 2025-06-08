@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	ilogger "zap-demo/logger"
+	ilogger "github.com/double12gzh/zap-demo/logger"
 )
 
 var L *ilogger.Logger

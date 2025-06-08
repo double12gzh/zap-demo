@@ -1,6 +1,6 @@
 package demo_context
 
-import "zap-demo/logger"
+import "github.com/double12gzh/zap-demo/logger"
 
 var L *logger.Logger
 

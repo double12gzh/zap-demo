@@ -3,8 +3,8 @@ package singleton
 import (
 	"fmt"
 
-	"zap-demo/example/demo"
-	"zap-demo/example/demo_context"
+	"github.com/double12gzh/zap-demo/example/demo"
+	"github.com/double12gzh/zap-demo/example/demo_context"
 )
 
 func CheckSingleton() {
