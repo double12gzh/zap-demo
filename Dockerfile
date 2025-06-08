@@ -7,9 +7,12 @@ FROM docker.1ms.run/golang:1.24 AS builder
 
 WORKDIR /app
 
-ENV CGO_ENABLED=0 \
-    GO111MODULE=on \
-    GOPROXY=https://goproxy.cn,direct
+ENV CGO_ENABLED=0
+ENV GO111MODULE=on
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOSUMDB=sum.golang.org
+#ENV GOPRIVATE=""
+#ENV GONOSUMDB=""
 
 # 单独复制 mod 文件以优化缓存
 COPY go.mod go.sum ./
