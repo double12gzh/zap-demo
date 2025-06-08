@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/double12gzh/zap-demo/common/middleware"
+	"github.com/double12gzh/zap-demo/router/middleware"
 	"github.com/double12gzh/zap-demo/example/demo"
 	"github.com/double12gzh/zap-demo/example/singleton"
 	"github.com/double12gzh/zap-demo/logger"

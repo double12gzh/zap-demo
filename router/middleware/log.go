@@ -14,6 +14,7 @@ func NewRequestID() string {
 }
 
 // RequestIDMiddleware 注入/生成 request id 并写入 context
+// RequestIDMiddleware 返回一个Gin中间件，用于为请求设置和记录请求ID
 func RequestIDMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		reqID := c.GetHeader(RequestIDHeader)
