@@ -10,8 +10,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-
-	common "my_logger/common/contextx"
 )
 
 const (
@@ -174,7 +172,7 @@ func NewLogger(config *Config) (*Logger, error) {
 // defaultConfig return default config
 func defaultConfig() *Config {
 	return &Config{
-		Level:             zapcore.InfoLevel.String(),
+		Level:             LogLevelInfo.String(),
 		Filename:          filepath.Join(logDir, logFile),
 		ErrorFilename:     filepath.Join(logDir, errorLogFile),
 		TimeFormat:        timeFormat,
@@ -285,56 +283,51 @@ func (l *Logger) WithFields(fields ...zap.Field) *Logger {
 // WithContext returns a logger with fields extracted from context.
 // If no fields are found, returns the original logger.
 func (l *Logger) WithContext(ctx context.Context) *Logger {
-	if ctx == nil {
-		return l
-	}
-
-	fields := common.ContextLoggerFields(ctx)
+	fields := FieldsFromContext(ctx)
 	if len(fields) == 0 {
 		return l
 	}
-
 	return l.WithFields(fields...)
 }
 
 // Info log info
-func (l *Logger) Info(msg string, fields ...zap.Field) {
-	l.logger.Info(msg, fields...)
+func (l *Logger) Info(ctx context.Context, msg string, fields ...zap.Field) {
+	l.WithContext(ctx).logger.Info(msg, fields...)
 }
 
 // Debug log debug
-func (l *Logger) Debug(msg string, fields ...zap.Field) {
-	l.logger.Debug(msg, fields...)
+func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
+	l.WithContext(ctx).logger.Debug(msg, fields...)
 }
 
 // Warn log warn
-func (l *Logger) Warn(msg string, fields ...zap.Field) {
-	l.logger.Warn(msg, fields...)
+func (l *Logger) Warn(ctx context.Context, msg string, fields ...zap.Field) {
+	l.WithContext(ctx).logger.Warn(msg, fields...)
 }
 
 // Error log error
-func (l *Logger) Error(msg string, fields ...zap.Field) {
-	l.logger.Error(msg, fields...)
+func (l *Logger) Error(ctx context.Context, msg string, fields ...zap.Field) {
+	l.WithContext(ctx).logger.Error(msg, fields...)
 }
 
 // Infof log info with format, use sugared logger
-func (l *Logger) Infof(template string, args ...any) {
-	l.sugaredLogger.Infof(template, args...)
+func (l *Logger) Infof(ctx context.Context, template string, args ...any) {
+	l.WithContext(ctx).sugaredLogger.Infof(template, args...)
 }
 
 // Debugf log debug with format, use sugared logger
-func (l *Logger) Debugf(template string, args ...any) {
-	l.sugaredLogger.Debugf(template, args...)
+func (l *Logger) Debugf(ctx context.Context, template string, args ...any) {
+	l.WithContext(ctx).sugaredLogger.Debugf(template, args...)
 }
 
 // Warnf log warn with format, use sugared logger
-func (l *Logger) Warnf(template string, args ...any) {
-	l.sugaredLogger.Warnf(template, args...)
+func (l *Logger) Warnf(ctx context.Context, template string, args ...any) {
+	l.WithContext(ctx).sugaredLogger.Warnf(template, args...)
 }
 
 // Errorf log error with format, use sugared logger
-func (l *Logger) Errorf(template string, args ...any) {
-	l.sugaredLogger.Errorf(template, args...)
+func (l *Logger) Errorf(ctx context.Context, template string, args ...any) {
+	l.WithContext(ctx).sugaredLogger.Errorf(template, args...)
 }
 
 // Sync sync the logger
@@ -351,7 +344,7 @@ func (l *Logger) Close() error {
 func createLogWriter(filename string, config *Config) (zapcore.WriteSyncer, error) {
 	// ensure log directory exists
 	logDir := filepath.Dir(filename)
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		return nil, err
 	}
 

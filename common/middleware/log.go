@@ -3,7 +3,9 @@ package middleware
 import (
 	"net/http"
 
-	contextx "my_logger/common/contextx"
+	"go.uber.org/zap"
+
+	"zap-demo/logger"
 )
 
 const RequestIDHeader = "X-Request-Id"
@@ -19,7 +21,7 @@ func RequestIDMiddleware(next http.Handler) http.Handler {
 		if reqID == "" {
 			reqID = NewRequestID()
 		}
-		ctx := contextx.SetRequestID(r.Context(), reqID)
+		ctx := logger.WithLogFields(r.Context(), zap.String(RequestIDHeader, reqID))
 		r = r.WithContext(ctx)
 		w.Header().Set(RequestIDHeader, reqID)
 		next.ServeHTTP(w, r)
