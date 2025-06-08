@@ -5,6 +5,11 @@ VERSION  := latest
 IMAGE    := $(APP_NAME):$(VERSION)
 BINARY   := app
 ENTRY    ?= ./cmd/main.go
+TEST_FUNC ?= .*  # 默认运行所有测试
+
+# 可配置变量
+PKG := ./...
+GOFILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 export DOCKER_BUILDKIT = 1
 
@@ -31,6 +36,7 @@ help: ## 显示所有支持的目标及参数说明
 	@printf "  %-10s = %-20s # 用于: image, image-no-cache, run, clean\n" "IMAGE" "$(IMAGE)"
 	@printf "  %-10s = %-20s # 用于: build, clean\n" "BINARY" "$(BINARY)"
 	@printf "  %-10s = %-20s # 用于: build\n" "ENTRY" "$(ENTRY)"
+	@printf "  %-10s = %-20s # 用于: test\n" "TEST_FUNC" "$(TEST_FUNC)"
 
 # --------------------------
 .PHONY: build
@@ -72,4 +78,34 @@ clean: ## 清除本地二进制和镜像
 clean-cache: ## 清除 Docker 构建缓存
 	@printf ">> ${COLOR_YELLOW}Cleaning Docker build cache...${COLOR_RESET}\n"
 	docker builder prune -f
+
+# --------------------------
+.PHONY: test
+test: ## 运行测试 (用法: make test TEST_FUNC=TestConcurrentPing)
+	@printf ">> ${COLOR_CYAN}Running tests for function: ${COLOR_YELLOW}%s${COLOR_RESET}\n" "$(TEST_FUNC)"
+	go test -v -count=1 -cover $(PKG) -gcflags="all=-N -l" -run $(TEST_FUNC)
+	@printf ">> ✅ ${COLOR_GREEN}Tests passed${COLOR_RESET}\n"
+
+# --------------------------
+.PHONY: fmt
+fmt: ## 格式化代码（go fmt）
+	go fmt $(PKG)
+
+# --------------------------
+.PHONY: imports
+imports: ## 使用 goimports 自动组织 import 和格式化代码
+	goimports -w $(GOFILES)
+
+# --------------------------
+.PHONY: lint
+lint: ## 执行静态分析 lint
+	golangci-lint run
+
+# --------------------------
+.PHONY: format
+format: fmt imports ## 一键格式化所有内容
+
+# --------------------------
+.PHONY: check
+check: fmt imports lint ## 一键检查所有问题
 
