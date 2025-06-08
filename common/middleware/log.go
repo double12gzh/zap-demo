@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"zap-demo/logger"
+	"github.com/double12gzh/zap-demo/logger"
 )
 
 const RequestIDHeader = "X-Request-Id"

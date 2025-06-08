@@ -1,8 +1,10 @@
 package main
 
 import (
-	"zap-demo/logger"
-	"zap-demo/router"
+	"fmt"
+
+	"github.com/double12gzh/zap-demo/logger"
+	"github.com/double12gzh/zap-demo/router"
 )
 
 func init() {
@@ -10,5 +12,6 @@ func init() {
 }
 
 func main() {
+	fmt.Println("main")
 	router.ServHTTP()
 }

@@ -1,4 +1,4 @@
-module zap-demo
+module github.com/double12gzh/zap-demo
 
 go 1.24
 

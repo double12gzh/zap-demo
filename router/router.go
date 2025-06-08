@@ -5,10 +5,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"zap-demo/common/middleware"
-	"zap-demo/example/demo"
-	"zap-demo/example/singleton"
-	"zap-demo/logger"
+	"github.com/double12gzh/zap-demo/common/middleware"
+	"github.com/double12gzh/zap-demo/example/demo"
+	"github.com/double12gzh/zap-demo/example/singleton"
+	"github.com/double12gzh/zap-demo/logger"
 )
 
 // Response represents a generic API response
