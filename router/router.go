@@ -29,12 +29,7 @@ func ServHTTP() {
 	r := gin.Default()
 
 	// Add RequestID middleware
-	r.Use(func(c *gin.Context) {
-		middleware.RequestIDMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			c.Request = r
-			c.Next()
-		})).ServeHTTP(c.Writer, c.Request)
-	})
+	r.Use(middleware.RequestIDMiddleware())
 
 	r.GET("/ping", func(c *gin.Context) {
 		demo.Demo(c.Request.Context())

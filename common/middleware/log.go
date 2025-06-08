@@ -1,8 +1,7 @@
 package middleware
 
 import (
-	"net/http"
-
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
 	"github.com/double12gzh/zap-demo/logger"
@@ -15,15 +14,15 @@ func NewRequestID() string {
 }
 
 // RequestIDMiddleware 注入/生成 request id 并写入 context
-func RequestIDMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reqID := r.Header.Get(RequestIDHeader)
+func RequestIDMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		reqID := c.GetHeader(RequestIDHeader)
 		if reqID == "" {
 			reqID = NewRequestID()
 		}
-		ctx := logger.WithLogFields(r.Context(), zap.String(RequestIDHeader, reqID))
-		r = r.WithContext(ctx)
-		w.Header().Set(RequestIDHeader, reqID)
-		next.ServeHTTP(w, r)
-	})
+		ctx := logger.WithLogFields(c.Request.Context(), zap.String(RequestIDHeader, reqID))
+		c.Request = c.Request.WithContext(ctx)
+		c.Header(RequestIDHeader, reqID)
+		c.Next()
+	}
 }
