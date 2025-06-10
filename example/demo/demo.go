@@ -38,8 +38,8 @@ func Demo(ctx context.Context) {
 	}
 
 	// 使用上下文日志器
-	contextLogger := logger.WithFields(
-		zap.String("module", "database"),
+	contextLogger := logger.WithFieldsMap(
+		map[string]any{"module": "database"},
 	)
 
 	for i := 0; i < 5; i++ {
@@ -58,7 +58,7 @@ func Demo(ctx context.Context) {
 
 func subDemo(ctx context.Context) {
 	l := ilogger.FromContext(ctx)
-	logger := l.WithField("func", "subDemo")
+	logger := l.WithFieldsMap(map[string]any{"func": "subDemo"})
 	logger.Info("i am sub demo")
 	// {"level":"info","time":"2025-06-08T18:35:28.991516226+08:00","caller":"demo/demo.go:55","msg":"i am sub demo","func":"subDemo","X-Request-Id":"test-trace-5","child":"myson"}
 }

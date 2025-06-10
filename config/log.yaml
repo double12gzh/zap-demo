@@ -1,0 +1,16 @@
+logger:
+  level: info  # debug, info, warn, error, panic, fatal
+  filename: /home/work/log/app/app.log
+  error_filename: /home/work/log/app/error.log
+  time_format: 2006-01-02T15:04:05.000Z07:00
+  max_size: 100  # MB
+  max_backups: 5
+  max_age: 30  # days
+  buffer_size: 262144  # 256KB
+  compress: true
+  console: true
+  disable_caller: false
+  disable_stacktrace: false
+  enable_async: true
+  async_buffer_size: 262144  # 256KB
+  async_flush_interval: 1000  # milliseconds 

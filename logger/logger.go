@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,9 +21,6 @@ const (
 	messageKey    = "msg"
 	callerKey     = "caller"
 	stacktraceKey = "stacktrace"
-	logDir        = "logs"
-	logFile       = "app.log"
-	errorLogFile  = "error.log"
 
 	// log buffer size
 	bufferSize = 256 * 1024
@@ -62,22 +60,21 @@ func FromContext(ctx context.Context) *Logger {
 
 // Config log config
 type Config struct {
-	Level             LogLevel `json:"level"`              // log level: debug, info, warn, error, panic, fatal
-	Filename          string   `json:"filename"`           // log file path
-	ErrorFilename     string   `json:"error_filename"`     // error log file path, if empty, use main log file
-	TimeFormat        string   `json:"time_format"`        // time format
-	MaxSize           int      `json:"max_size"`           // max size of log file(MB)
-	MaxBackups        int      `json:"max_backups"`        // max number of log file backups
-	MaxAge            int      `json:"max_age"`            // max number of days to keep log files
-	BufferSize        int      `json:"buffer_size"`        // output buffer size
-	Compress          bool     `json:"compress"`           // compress old log files
-	Console           bool     `json:"console"`            // output log to console
-	DisableCaller     bool     `json:"disable_caller"`     // disable caller info
-	DisableStacktrace bool     `json:"disable_stacktrace"` // disable stacktrace
-	// Performance optimization options
-	EnableAsync        bool `json:"enable_async"`         // enable async logging
-	AsyncBufferSize    int  `json:"async_buffer_size"`    // async buffer size
-	AsyncFlushInterval int  `json:"async_flush_interval"` // async flush interval in milliseconds
+	Level              LogLevel `json:"level" yaml:"level"`                               // log level: debug, info, warn, error, panic, fatal
+	Filename           string   `json:"filename" yaml:"filename"`                         // log file path
+	ErrorFilename      string   `json:"error_filename" yaml:"error_filename"`             // error log file path, if empty, use main log file
+	TimeFormat         string   `json:"time_format" yaml:"time_format"`                   // time format
+	MaxSize            int      `json:"max_size" yaml:"max_size"`                         // max size of log file(MB)
+	MaxBackups         int      `json:"max_backups" yaml:"max_backups"`                   // max number of log file backups
+	MaxAge             int      `json:"max_age" yaml:"max_age"`                           // max number of days to keep log files
+	BufferSize         int      `json:"buffer_size" yaml:"buffer_size"`                   // output buffer size
+	Compress           bool     `json:"compress" yaml:"compress"`                         // compress old log files
+	Console            bool     `json:"console" yaml:"console"`                           // output log to console
+	DisableCaller      bool     `json:"disable_caller" yaml:"disable_caller"`             // disable caller info
+	DisableStacktrace  bool     `json:"disable_stacktrace" yaml:"disable_stacktrace"`     // disable stacktrace
+	EnableAsync        bool     `json:"enable_async" yaml:"enable_async"`                 // enable async logging
+	AsyncBufferSize    int      `json:"async_buffer_size" yaml:"async_buffer_size"`       // async buffer size
+	AsyncFlushInterval int      `json:"async_flush_interval" yaml:"async_flush_interval"` // async flush interval in milliseconds
 }
 
 // Logger
@@ -218,22 +215,21 @@ func NewLogger(config *Config) (*Logger, error) {
 // defaultConfig return default config
 func defaultConfig() *Config {
 	return &Config{
-		Level:             LogLevelInfo,
-		Filename:          filepath.Join(logDir, logFile),
-		ErrorFilename:     filepath.Join(logDir, errorLogFile),
-		TimeFormat:        timeFormat,
-		MaxSize:           maxSize,
-		MaxBackups:        maxBackups,
-		MaxAge:            maxAge,
-		BufferSize:        bufferSize,
-		Compress:          true,
-		Console:           true,
-		DisableCaller:     false,
-		DisableStacktrace: false,
-		// Default performance optimization options
+		Level:              LogLevelInfo,
+		Filename:           filepath.Join("logs", "app.log"), // 默认 logs 目录
+		ErrorFilename:      filepath.Join("logs", "error.log"),
+		TimeFormat:         timeFormat,
+		MaxSize:            maxSize,
+		MaxBackups:         maxBackups,
+		MaxAge:             maxAge,
+		BufferSize:         bufferSize,
+		Compress:           true,
+		Console:            true,
+		DisableCaller:      false,
+		DisableStacktrace:  false,
 		EnableAsync:        false,
-		AsyncBufferSize:    256 * 1024, // 256KB
-		AsyncFlushInterval: 1000,       // 1 second
+		AsyncBufferSize:    256 * 1024,
+		AsyncFlushInterval: 1000,
 	}
 }
 
@@ -276,42 +272,6 @@ func (l *Logger) GetLogger() *zap.Logger {
 
 func (l *Logger) GetSugaredLogger() *zap.SugaredLogger {
 	return l.sugaredLogger
-}
-
-// WithField add field to logger
-func (l *Logger) WithField(key string, value any) *Logger {
-	var field zap.Field
-	switch v := any(value).(type) {
-	case string:
-		field = zap.String(key, v)
-	case int:
-		field = zap.Int(key, v)
-	case int64:
-		field = zap.Int64(key, v)
-	case float64:
-		field = zap.Float64(key, v)
-	case bool:
-		field = zap.Bool(key, v)
-	case error:
-		field = zap.Error(v)
-	case time.Time:
-		field = zap.Time(key, v)
-	case time.Duration:
-		field = zap.Duration(key, v)
-	default:
-		field = zap.Any(key, v)
-	}
-
-	newLogger := l.logger.With(field)
-	// Get a Logger instance from pool
-	newL := loggerPool.Get().(*Logger)
-	newL.logger = newLogger
-	newL.sugaredLogger = newLogger.Sugar()
-	newL.config = l.config
-	newL.fileCore = l.fileCore
-	newL.consoleCore = l.consoleCore
-	newL.errorCore = l.errorCore
-	return newL
 }
 
 // WithFields add fields to logger
@@ -406,6 +366,10 @@ func (l *Logger) Close() error {
 	err := l.Sync()
 	// Put the Logger instance back to pool
 	loggerPool.Put(l)
+	// Ignore sync errors for os.Stdout and os.Stderr
+	if err != nil && (strings.Contains(err.Error(), "invalid argument") || strings.Contains(err.Error(), "/dev/stdout")) {
+		return nil
+	}
 	return err
 }
 
