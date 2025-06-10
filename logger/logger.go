@@ -38,6 +38,22 @@ var (
 	logger *Logger
 )
 
+type loggerKey struct{}
+
+// NewContextWithValue returns a new context with the provided logger.
+func NewContextWithValue(ctx context.Context, l *Logger) context.Context {
+	return context.WithValue(ctx, loggerKey{}, l)
+}
+
+// FromContext returns the logger from the context.
+// If no logger is found, it returns the global default logger.
+func FromContext(ctx context.Context) *Logger {
+	if l, ok := ctx.Value(loggerKey{}).(*Logger); ok {
+		return l
+	}
+	return GetLogger()
+}
+
 // Config log config
 type Config struct {
 	Level             string `json:"level"`              // log evel: debug, info, warn, error, panic, fatal
@@ -291,43 +307,43 @@ func (l *Logger) WithContext(ctx context.Context) *Logger {
 }
 
 // Info log info
-func (l *Logger) Info(ctx context.Context, msg string, fields ...zap.Field) {
-	l.WithContext(ctx).logger.Info(msg, fields...)
+func (l *Logger) Info(msg string, fields ...zap.Field) {
+	l.logger.Info(msg, fields...)
 }
 
 // Debug log debug
-func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
-	l.WithContext(ctx).logger.Debug(msg, fields...)
+func (l *Logger) Debug(msg string, fields ...zap.Field) {
+	l.logger.Debug(msg, fields...)
 }
 
 // Warn log warn
-func (l *Logger) Warn(ctx context.Context, msg string, fields ...zap.Field) {
-	l.WithContext(ctx).logger.Warn(msg, fields...)
+func (l *Logger) Warn(msg string, fields ...zap.Field) {
+	l.logger.Warn(msg, fields...)
 }
 
 // Error log error
-func (l *Logger) Error(ctx context.Context, msg string, fields ...zap.Field) {
-	l.WithContext(ctx).logger.Error(msg, fields...)
+func (l *Logger) Error(msg string, fields ...zap.Field) {
+	l.logger.Error(msg, fields...)
 }
 
 // Infof log info with format, use sugared logger
-func (l *Logger) Infof(ctx context.Context, template string, args ...any) {
-	l.WithContext(ctx).sugaredLogger.Infof(template, args...)
+func (l *Logger) Infof(template string, args ...any) {
+	l.sugaredLogger.Infof(template, args...)
 }
 
 // Debugf log debug with format, use sugared logger
-func (l *Logger) Debugf(ctx context.Context, template string, args ...any) {
-	l.WithContext(ctx).sugaredLogger.Debugf(template, args...)
+func (l *Logger) Debugf(template string, args ...any) {
+	l.sugaredLogger.Debugf(template, args...)
 }
 
 // Warnf log warn with format, use sugared logger
-func (l *Logger) Warnf(ctx context.Context, template string, args ...any) {
-	l.WithContext(ctx).sugaredLogger.Warnf(template, args...)
+func (l *Logger) Warnf(template string, args ...any) {
+	l.sugaredLogger.Warnf(template, args...)
 }
 
 // Errorf log error with format, use sugared logger
-func (l *Logger) Errorf(ctx context.Context, template string, args ...any) {
-	l.WithContext(ctx).sugaredLogger.Errorf(template, args...)
+func (l *Logger) Errorf(template string, args ...any) {
+	l.sugaredLogger.Errorf(template, args...)
 }
 
 // Sync sync the logger

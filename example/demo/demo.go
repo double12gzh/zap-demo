@@ -18,7 +18,8 @@ func CreateL() {
 // OptimizedDemo 展示 myzaplog 的优化使用方式
 func Demo(ctx context.Context) {
 	// 通过全局  logger 新生成带有独特上下文的日志记录器
-	logger := ilogger.GetLogger().WithField("func", "Demo")
+	// logger := ilogger.GetLogger().WithField("func", "Demo")
+	logger := ilogger.FromContext(ctx)
 
 	// 创建可重用的字段
 	serviceField := zap.String("service", "payment")
@@ -27,7 +28,7 @@ func Demo(ctx context.Context) {
 	// 批量日志记录
 	for i := 0; i < 4; i++ {
 		// 继承 context 中的字段, 并添加额外的字段
-		logger.Info(ctx, "Payment processed",
+		logger.Info("Payment processed",
 			serviceField,
 			versionField,
 			zap.Int("transaction_id", i),
@@ -42,7 +43,7 @@ func Demo(ctx context.Context) {
 	)
 
 	for i := 0; i < 5; i++ {
-		contextLogger.Info(ctx, "Database query executed",
+		contextLogger.Info("Database query executed",
 			zap.Int("rows_returned", i%100),
 			zap.Duration("query_time", time.Millisecond*time.Duration(i%50)),
 		)
@@ -56,7 +57,8 @@ func Demo(ctx context.Context) {
 }
 
 func subDemo(ctx context.Context) {
-	logger := ilogger.GetLogger().WithField("func", "subDemo")
-	logger.Info(ctx, "i am sub demo")
+	l := ilogger.FromContext(ctx)
+	logger := l.WithField("func", "subDemo")
+	logger.Info("i am sub demo")
 	// {"level":"info","time":"2025-06-08T18:35:28.991516226+08:00","caller":"demo/demo.go:55","msg":"i am sub demo","func":"subDemo","X-Request-Id":"test-trace-5","child":"myson"}
 }
