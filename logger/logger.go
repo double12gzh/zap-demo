@@ -309,7 +309,7 @@ func (l *Logger) WithFieldsMap(fields map[string]any) *Logger {
 // WithContext returns a logger with fields extracted from context.
 // If no fields are found, returns the original logger.
 func (l *Logger) WithContext(ctx context.Context) *Logger {
-	fields := FieldsFromContext(ctx)
+	fields := GetFieldsFromContext(ctx)
 	if len(fields) == 0 {
 		return l
 	}

@@ -79,8 +79,8 @@ func TestLoggerContext(t *testing.T) {
 	fields := []zap.Field{
 		zap.String("ctx_key", "ctx_value"),
 	}
-	ctxWithFields := WithLogFields(ctx, fields...)
-	fieldsFromCtx := FieldsFromContext(ctxWithFields)
+	ctxWithFields := StoreFieldsInContext(ctx, fields...)
+	fieldsFromCtx := GetFieldsFromContext(ctxWithFields)
 	assert.Equal(t, 1, len(fieldsFromCtx))
 
 	// Test WithContext

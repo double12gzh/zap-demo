@@ -8,15 +8,15 @@ import (
 
 type ctxLogFieldsKey struct{}
 
-func WithLogFields(ctx context.Context, fields ...zap.Field) context.Context {
+func StoreFieldsInContext(ctx context.Context, fields ...zap.Field) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	existingFields := FieldsFromContext(ctx)
+	existingFields := GetFieldsFromContext(ctx)
 	return context.WithValue(ctx, ctxLogFieldsKey{}, append(existingFields, fields...))
 }
 
-func FieldsFromContext(ctx context.Context) []zap.Field {
+func GetFieldsFromContext(ctx context.Context) []zap.Field {
 	if ctx == nil {
 		return nil
 	}
