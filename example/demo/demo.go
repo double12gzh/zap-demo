@@ -51,7 +51,7 @@ func Demo(ctx context.Context) {
 	}
 
 	// 使用 WithLogFields 方法添加字段到上下文,预期在 subDemo 中使用
-	ctx = ilogger.WithLogFields(ctx, zap.String("child", "myson"))
+	ctx = ilogger.StoreFieldsInContext(ctx, zap.String("child", "myson"))
 
 	subDemo(ctx)
 }
