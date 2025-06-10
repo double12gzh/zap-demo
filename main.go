@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	_ = logger.InitLogger(nil)
+	_ = logger.InitLoggerFromYaml("config/log.yaml")
 }
 
 func main() {
