@@ -36,6 +36,12 @@ const (
 var (
 	once   sync.Once
 	logger *Logger
+	// Add a pool for Logger instances
+	loggerPool = sync.Pool{
+		New: func() any {
+			return &Logger{}
+		},
+	}
 )
 
 type loggerKey struct{}
@@ -56,7 +62,7 @@ func FromContext(ctx context.Context) *Logger {
 
 // Config log config
 type Config struct {
-	Level             LogLevel `json:"level"`              // log evel: debug, info, warn, error, panic, fatal
+	Level             LogLevel `json:"level"`              // log level: debug, info, warn, error, panic, fatal
 	Filename          string   `json:"filename"`           // log file path
 	ErrorFilename     string   `json:"error_filename"`     // error log file path, if empty, use main log file
 	TimeFormat        string   `json:"time_format"`        // time format
@@ -68,6 +74,10 @@ type Config struct {
 	Console           bool     `json:"console"`            // output log to console
 	DisableCaller     bool     `json:"disable_caller"`     // disable caller info
 	DisableStacktrace bool     `json:"disable_stacktrace"` // disable stacktrace
+	// Performance optimization options
+	EnableAsync        bool `json:"enable_async"`         // enable async logging
+	AsyncBufferSize    int  `json:"async_buffer_size"`    // async buffer size
+	AsyncFlushInterval int  `json:"async_flush_interval"` // async flush interval in milliseconds
 }
 
 // Logger
@@ -136,6 +146,12 @@ func NewLogger(config *Config) (*Logger, error) {
 		if err != nil {
 			return nil, err
 		}
+		if c.EnableAsync {
+			fileWriteSyncer = &zapcore.BufferedWriteSyncer{
+				WS:   fileWriteSyncer,
+				Size: c.AsyncBufferSize,
+			}
+		}
 		l.fileCore = createLogCore(fileWriteSyncer, encoderConfig, level)
 		cores = append(cores, l.fileCore)
 	}
@@ -146,6 +162,12 @@ func NewLogger(config *Config) (*Logger, error) {
 		if err != nil {
 			return nil, err
 		}
+		if c.EnableAsync {
+			errorWriteSyncer = &zapcore.BufferedWriteSyncer{
+				WS:   errorWriteSyncer,
+				Size: c.AsyncBufferSize,
+			}
+		}
 		l.errorCore = createLogCore(errorWriteSyncer, encoderConfig, zapcore.ErrorLevel)
 		cores = append(cores, l.errorCore)
 	}
@@ -155,9 +177,17 @@ func NewLogger(config *Config) (*Logger, error) {
 		consoleEncoderConfig := encoderConfig
 		consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
+		consoleWriteSyncer := zapcore.AddSync(os.Stdout)
+		if c.EnableAsync {
+			consoleWriteSyncer = &zapcore.BufferedWriteSyncer{
+				WS:   consoleWriteSyncer,
+				Size: c.AsyncBufferSize,
+			}
+		}
+
 		l.consoleCore = zapcore.NewCore(
 			zapcore.NewConsoleEncoder(consoleEncoderConfig),
-			zapcore.AddSync(os.Stdout),
+			consoleWriteSyncer,
 			level,
 		)
 		cores = append(cores, l.consoleCore)
@@ -200,6 +230,10 @@ func defaultConfig() *Config {
 		Console:           true,
 		DisableCaller:     false,
 		DisableStacktrace: false,
+		// Default performance optimization options
+		EnableAsync:        false,
+		AsyncBufferSize:    256 * 1024, // 256KB
+		AsyncFlushInterval: 1000,       // 1 second
 	}
 }
 
@@ -269,14 +303,15 @@ func (l *Logger) WithField(key string, value any) *Logger {
 	}
 
 	newLogger := l.logger.With(field)
-	return &Logger{
-		logger:        newLogger,
-		sugaredLogger: newLogger.Sugar(),
-		config:        l.config,
-		fileCore:      l.fileCore,
-		consoleCore:   l.consoleCore,
-		errorCore:     l.errorCore,
-	}
+	// Get a Logger instance from pool
+	newL := loggerPool.Get().(*Logger)
+	newL.logger = newLogger
+	newL.sugaredLogger = newLogger.Sugar()
+	newL.config = l.config
+	newL.fileCore = l.fileCore
+	newL.consoleCore = l.consoleCore
+	newL.errorCore = l.errorCore
+	return newL
 }
 
 // WithFields add fields to logger
@@ -286,14 +321,29 @@ func (l *Logger) WithFields(fields ...zap.Field) *Logger {
 	}
 
 	newLogger := l.logger.With(fields...)
-	return &Logger{
-		logger:        newLogger,
-		sugaredLogger: newLogger.Sugar(),
-		config:        l.config,
-		fileCore:      l.fileCore,
-		consoleCore:   l.consoleCore,
-		errorCore:     l.errorCore,
+	// Get a Logger instance from pool
+	newL := loggerPool.Get().(*Logger)
+	newL.logger = newLogger
+	newL.sugaredLogger = newLogger.Sugar()
+	newL.config = l.config
+	newL.fileCore = l.fileCore
+	newL.consoleCore = l.consoleCore
+	newL.errorCore = l.errorCore
+	return newL
+}
+
+// WithFieldsMap add fields from map to logger
+func (l *Logger) WithFieldsMap(fields map[string]any) *Logger {
+	if len(fields) == 0 {
+		return l
 	}
+
+	zapFields := make([]zap.Field, 0, len(fields))
+	for k, v := range fields {
+		zapFields = append(zapFields, zap.Any(k, v))
+	}
+
+	return l.WithFields(zapFields...)
 }
 
 // WithContext returns a logger with fields extracted from context.
@@ -353,7 +403,10 @@ func (l *Logger) Sync() error {
 
 // Close sync and close the logger
 func (l *Logger) Close() error {
-	return l.Sync()
+	err := l.Sync()
+	// Put the Logger instance back to pool
+	loggerPool.Put(l)
+	return err
 }
 
 // createLogWriter create a log writer
@@ -376,9 +429,14 @@ func createLogWriter(filename string, config *Config) (zapcore.WriteSyncer, erro
 
 	// use buffered writer to improve performance
 	if config.BufferSize > 0 {
+		// Use a larger buffer size for better performance
+		bufferSize := config.BufferSize
+		if bufferSize < 4096 {
+			bufferSize = 4096 // Minimum buffer size
+		}
 		return &zapcore.BufferedWriteSyncer{
 			WS:   zapcore.AddSync(writer),
-			Size: config.BufferSize,
+			Size: bufferSize,
 		}, nil
 	}
 
