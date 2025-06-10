@@ -56,18 +56,18 @@ func FromContext(ctx context.Context) *Logger {
 
 // Config log config
 type Config struct {
-	Level             string `json:"level"`              // log evel: debug, info, warn, error, panic, fatal
-	Filename          string `json:"filename"`           // log file path
-	ErrorFilename     string `json:"error_filename"`     // error log file path, if empty, use main log file
-	TimeFormat        string `json:"time_format"`        // time format
-	MaxSize           int    `json:"max_size"`           // max size of log file(MB)
-	MaxBackups        int    `json:"max_backups"`        // max number of log file backups
-	MaxAge            int    `json:"max_age"`            // max number of days to keep log files
-	BufferSize        int    `json:"buffer_size"`        // output buffer size
-	Compress          bool   `json:"compress"`           // compress old log files
-	Console           bool   `json:"console"`            // output log to console
-	DisableCaller     bool   `json:"disable_caller"`     // disable caller info
-	DisableStacktrace bool   `json:"disable_stacktrace"` // disable stacktrace
+	Level             LogLevel `json:"level"`              // log evel: debug, info, warn, error, panic, fatal
+	Filename          string   `json:"filename"`           // log file path
+	ErrorFilename     string   `json:"error_filename"`     // error log file path, if empty, use main log file
+	TimeFormat        string   `json:"time_format"`        // time format
+	MaxSize           int      `json:"max_size"`           // max size of log file(MB)
+	MaxBackups        int      `json:"max_backups"`        // max number of log file backups
+	MaxAge            int      `json:"max_age"`            // max number of days to keep log files
+	BufferSize        int      `json:"buffer_size"`        // output buffer size
+	Compress          bool     `json:"compress"`           // compress old log files
+	Console           bool     `json:"console"`            // output log to console
+	DisableCaller     bool     `json:"disable_caller"`     // disable caller info
+	DisableStacktrace bool     `json:"disable_stacktrace"` // disable stacktrace
 }
 
 // Logger
@@ -100,7 +100,7 @@ func GetLogger() *Logger {
 // NewLogger create a new logger
 func NewLogger(config *Config) (*Logger, error) {
 	c := mergeConfigWithDefault(config)
-	level, err := zapcore.ParseLevel(c.Level)
+	level, err := zapcore.ParseLevel(c.Level.String())
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func NewLogger(config *Config) (*Logger, error) {
 // defaultConfig return default config
 func defaultConfig() *Config {
 	return &Config{
-		Level:             LogLevelInfo.String(),
+		Level:             LogLevelInfo,
 		Filename:          filepath.Join(logDir, logFile),
 		ErrorFilename:     filepath.Join(logDir, errorLogFile),
 		TimeFormat:        timeFormat,
