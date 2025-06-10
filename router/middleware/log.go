@@ -21,7 +21,11 @@ func RequestIDMiddleware() gin.HandlerFunc {
 		if reqID == "" {
 			reqID = NewRequestID()
 		}
-		ctx := logger.WithLogFields(c.Request.Context(), zap.String(RequestIDHeader, reqID))
+		
+		l := logger.FromContext(c.Request.Context())
+		l = l.WithFields(zap.String(RequestIDHeader, reqID))
+		ctx := logger.NewContextWithValue(c.Request.Context(), l)
+
 		c.Request = c.Request.WithContext(ctx)
 		c.Header(RequestIDHeader, reqID)
 		c.Next()
