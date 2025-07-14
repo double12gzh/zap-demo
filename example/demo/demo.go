@@ -59,6 +59,10 @@ func Demo(ctx context.Context) {
 func subDemo(ctx context.Context) {
 	l := ilogger.FromContext(ctx)
 	logger := l.WithFieldsMap(map[string]any{"func": "subDemo"})
+	// 调用 logger 日志方法
 	logger.Info("i am sub demo")
 	// {"level":"info","time":"2025-06-08T18:35:28.991516226+08:00","caller":"demo/demo.go:55","msg":"i am sub demo","func":"subDemo","X-Request-Id":"test-trace-5","child":"myson"}
+
+	// 直接调用包级别的日志函数
+	ilogger.Infof(ctx, "Hello %s", "world")
 }
