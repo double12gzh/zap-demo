@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -414,4 +415,38 @@ func createLogCore(writer zapcore.WriteSyncer, encoderConfig zapcore.EncoderConf
 		writer,
 		level,
 	)
+}
+
+func Info(ctx context.Context, msg string, fields ...zap.Field) {
+	FromContext(ctx).Info(msg, fields...)
+}
+
+func Debug(ctx context.Context, msg string, fields ...zap.Field) {
+	FromContext(ctx).Debug(msg, fields...)
+}
+
+func Warn(ctx context.Context, msg string, fields ...zap.Field) {
+	FromContext(ctx).Warn(msg, fields...)
+}
+
+func Error(ctx context.Context, msg string, fields ...zap.Field) {
+	FromContext(ctx).Error(msg, fields...)
+}
+
+func Infof(ctx context.Context, template string, args ...any) {
+	// 创建一个带有正确 callerSkip 的 logger
+	// 使用原始的 zap logger 而不是 sugared logger，这样可以更好地控制 caller 信息
+	FromContext(ctx).logger.Info(fmt.Sprintf(template, args...))
+}
+
+func Debugf(ctx context.Context, template string, args ...any) {
+	FromContext(ctx).logger.Debug(fmt.Sprintf(template, args...))
+}
+
+func Warnf(ctx context.Context, template string, args ...any) {
+	FromContext(ctx).logger.Warn(fmt.Sprintf(template, args...))
+}
+
+func Errorf(ctx context.Context, template string, args ...any) {
+	FromContext(ctx).logger.Error(fmt.Sprintf(template, args...))
 }
