@@ -418,19 +418,19 @@ func createLogCore(writer zapcore.WriteSyncer, encoderConfig zapcore.EncoderConf
 }
 
 func Info(ctx context.Context, msg string, fields ...zap.Field) {
-	FromContext(ctx).Info(msg, fields...)
+	FromContext(ctx).logger.Info(msg, fields...)
 }
 
 func Debug(ctx context.Context, msg string, fields ...zap.Field) {
-	FromContext(ctx).Debug(msg, fields...)
+	FromContext(ctx).logger.Debug(msg, fields...)
 }
 
 func Warn(ctx context.Context, msg string, fields ...zap.Field) {
-	FromContext(ctx).Warn(msg, fields...)
+	FromContext(ctx).logger.Warn(msg, fields...)
 }
 
 func Error(ctx context.Context, msg string, fields ...zap.Field) {
-	FromContext(ctx).Error(msg, fields...)
+	FromContext(ctx).logger.Error(msg, fields...)
 }
 
 func Infof(ctx context.Context, template string, args ...any) {
