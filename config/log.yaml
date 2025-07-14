@@ -7,7 +7,7 @@ logger:
   max_backups: 5
   max_age: 30  # days
   buffer_size: 262144  # 256KB
-  compress: true
+  compress: false
   console: true
   disable_caller: false
   disable_stacktrace: false
