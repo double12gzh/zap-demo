@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/double12gzh/zap-demo/logger"
@@ -10,7 +11,7 @@ import (
 const RequestIDHeader = "X-Request-Id"
 
 func NewRequestID() string {
-	return "unique-request-id"
+	return uuid.New().String()
 }
 
 // RequestIDMiddleware 注入/生成 request id 并写入 context

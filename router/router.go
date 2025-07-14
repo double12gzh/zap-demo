@@ -19,17 +19,18 @@ type Response struct {
 }
 
 func ServHTTP() {
-	go func() {
-		for {
-			_ = logger.GetLogger().Sync()
-		}
-	}()
-
 	// Create a new Gin router with default middleware
 	r := gin.Default()
 
 	// Add RequestID middleware
 	r.Use(middleware.RequestIDMiddleware())
+
+	// Start logger sync goroutine after logger is initialized
+	go func() {
+		for {
+			_ = logger.GetLogger().Sync()
+		}
+	}()
 
 	r.GET("/ping", func(c *gin.Context) {
 		demo.Demo(c.Request.Context())
