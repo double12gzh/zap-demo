@@ -15,7 +15,7 @@ type YamlConfig struct {
 // LoadConfigFromYaml loads logger configuration from a YAML file
 func LoadConfigFromYaml(configPath string) (*Config, error) {
 	// Read the YAML file
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(configPath) //nolint:gosec // configPath is from trusted app config, not user input
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}

@@ -1,3 +1,4 @@
+// Package demo_config demonstrates how to initialize the logger from a YAML config file.
 package demo_config
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/double12gzh/zap-demo/logger"
 )
 
+// DemoConfig demonstrates YAML-based logger initialization and basic usage.
 func DemoConfig() {
 	// Initialize logger from YAML config
 	configPath := filepath.Join("config", "log.yaml")

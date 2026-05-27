@@ -8,6 +8,8 @@ import (
 
 type ctxLogFieldsKey struct{}
 
+// StoreFieldsInContext appends zap fields to the context for later retrieval.
+// It is safe to call from branched goroutines — a new slice is allocated each time.
 func StoreFieldsInContext(ctx context.Context, fields ...zap.Field) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -22,6 +24,7 @@ func StoreFieldsInContext(ctx context.Context, fields ...zap.Field) context.Cont
 	return context.WithValue(ctx, ctxLogFieldsKey{}, newFields)
 }
 
+// GetFieldsFromContext retrieves all zap fields previously stored in the context.
 func GetFieldsFromContext(ctx context.Context) []zap.Field {
 	if ctx == nil {
 		return nil

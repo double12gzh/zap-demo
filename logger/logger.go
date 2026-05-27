@@ -1,3 +1,6 @@
+// Package logger provides a high-performance structured logging library
+// built on top of uber-go/zap with log rotation, async writing, dynamic
+// log level adjustment, and context-aware field propagation.
 package logger
 
 import (
@@ -75,10 +78,11 @@ type Config struct {
 	TraceKey           string   `json:"trace_key" yaml:"trace_key"`                       // trace id header/context key
 }
 
-// Logger
+// Logger is the core structured logger backed by zap.
 type Logger struct {
-	config *Config
-	level  zap.AtomicLevel
+	config   *Config
+	configMu sync.RWMutex // protects config fields that can be mutated at runtime
+	level    zap.AtomicLevel
 
 	fileCore      zapcore.Core
 	consoleCore   zapcore.Core
@@ -89,6 +93,9 @@ type Logger struct {
 	stopOnce      sync.Once
 }
 
+// InitLogger initializes the global logger singleton.
+// It is safe for concurrent use but will only initialize once.
+// Subsequent calls are no-ops. Use ResetForTesting in tests to re-initialize.
 func InitLogger(config *Config) (err error) {
 	once.Do(func() {
 		logger, err = NewLogger(config)
@@ -97,6 +104,9 @@ func InitLogger(config *Config) (err error) {
 	return err
 }
 
+// GetLogger returns the global logger singleton.
+// It panics if InitLogger has not been called yet.
+// For a non-panicking alternative, use NewLogger directly.
 func GetLogger() *Logger {
 	if logger == nil {
 		panic("logger not initialized, please call InitLogger first")
@@ -147,12 +157,7 @@ func NewLogger(config *Config) (*Logger, error) {
 		if err != nil {
 			return nil, err
 		}
-		if c.EnableAsync {
-			fileWriteSyncer = &zapcore.BufferedWriteSyncer{
-				WS:   fileWriteSyncer,
-				Size: c.AsyncBufferSize,
-			}
-		}
+		fileWriteSyncer = wrapWriteSyncer(fileWriteSyncer, c)
 		l.fileCore = createLogCore(fileWriteSyncer, encoderConfig, atomicLevel)
 		cores = append(cores, l.fileCore)
 	}
@@ -163,12 +168,7 @@ func NewLogger(config *Config) (*Logger, error) {
 		if err != nil {
 			return nil, err
 		}
-		if c.EnableAsync {
-			errorWriteSyncer = &zapcore.BufferedWriteSyncer{
-				WS:   errorWriteSyncer,
-				Size: c.AsyncBufferSize,
-			}
-		}
+		errorWriteSyncer = wrapWriteSyncer(errorWriteSyncer, c)
 		l.errorCore = createLogCore(errorWriteSyncer, encoderConfig, zapcore.ErrorLevel)
 		cores = append(cores, l.errorCore)
 	}
@@ -179,12 +179,7 @@ func NewLogger(config *Config) (*Logger, error) {
 		consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
 		consoleWriteSyncer := zapcore.AddSync(os.Stdout)
-		if c.EnableAsync {
-			consoleWriteSyncer = &zapcore.BufferedWriteSyncer{
-				WS:   consoleWriteSyncer,
-				Size: c.AsyncBufferSize,
-			}
-		}
+		consoleWriteSyncer = wrapWriteSyncer(consoleWriteSyncer, c)
 
 		l.consoleCore = zapcore.NewCore(
 			zapcore.NewConsoleEncoder(consoleEncoderConfig),
@@ -289,28 +284,35 @@ func mergeConfigWithDefault(cfg *Config) *Config {
 	return cfg
 }
 
-// GetLogger get the logger
+// GetLogger returns the underlying zap.Logger.
 func (l *Logger) GetLogger() *zap.Logger {
 	return l.logger
 }
 
+// GetSugaredLogger returns the underlying zap.SugaredLogger.
 func (l *Logger) GetSugaredLogger() *zap.SugaredLogger {
 	return l.sugaredLogger
 }
 
-// Config returns the logger configuration
-func (l *Logger) Config() *Config {
-	return l.config
+// Config returns a copy of the logger configuration.
+// It is safe for concurrent use with SetLevel.
+func (l *Logger) Config() Config {
+	l.configMu.RLock()
+	defer l.configMu.RUnlock()
+	return *l.config
 }
 
-// SetLevel dynamically changes the log level thread-safely
+// SetLevel dynamically changes the log level.
+// It is safe for concurrent use.
 func (l *Logger) SetLevel(lvl LogLevel) error {
 	parsedLevel, err := zapcore.ParseLevel(lvl.String())
 	if err != nil {
 		return err
 	}
 	l.level.SetLevel(parsedLevel)
+	l.configMu.Lock()
 	l.config.Level = lvl
+	l.configMu.Unlock()
 	return nil
 }
 
@@ -416,11 +418,12 @@ func (l *Logger) Close() error {
 	return err
 }
 
-// createLogWriter create a log writer
+// createLogWriter creates a raw log writer backed by lumberjack (without buffering).
+// Buffering is handled separately by wrapWriteSyncer to avoid double-wrapping.
 func createLogWriter(filename string, config *Config) (zapcore.WriteSyncer, error) {
 	// ensure log directory exists
 	logDir := filepath.Dir(filename)
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
+	if err := os.MkdirAll(logDir, 0o750); err != nil {
 		return nil, err
 	}
 
@@ -434,20 +437,30 @@ func createLogWriter(filename string, config *Config) (zapcore.WriteSyncer, erro
 		LocalTime:  true,
 	}
 
-	// use buffered writer to improve performance
+	return zapcore.AddSync(writer), nil
+}
+
+// wrapWriteSyncer wraps a WriteSyncer with a single BufferedWriteSyncer layer.
+// If EnableAsync is true, uses AsyncBufferSize; otherwise if BufferSize > 0,
+// uses BufferSize for synchronous buffering. This prevents double-wrapping.
+func wrapWriteSyncer(ws zapcore.WriteSyncer, config *Config) zapcore.WriteSyncer {
+	if config.EnableAsync {
+		return &zapcore.BufferedWriteSyncer{
+			WS:   ws,
+			Size: config.AsyncBufferSize,
+		}
+	}
 	if config.BufferSize > 0 {
-		// Use a larger buffer size for better performance
-		bufferSize := config.BufferSize
-		if bufferSize < 4096 {
-			bufferSize = 4096 // Minimum buffer size
+		bufSize := config.BufferSize
+		if bufSize < 4096 {
+			bufSize = 4096 // Minimum buffer size
 		}
 		return &zapcore.BufferedWriteSyncer{
-			WS:   zapcore.AddSync(writer),
-			Size: bufferSize,
-		}, nil
+			WS:   ws,
+			Size: bufSize,
+		}
 	}
-
-	return zapcore.AddSync(writer), nil
+	return ws
 }
 
 // createLogCore create a log core

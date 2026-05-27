@@ -1,5 +1,26 @@
-bin/
+# Version control
+.git/
+.gitignore
+
+# CI/CD and tooling config
+.golangci.yml
+.pre-commit-config.yaml
+Makefile
+
+# Documentation
+README.md
+
+# IDE and editor files
+.idea/
 .vscode/
+
+# Build artifacts
+bin/
+
+# Logs
+logs/
 *.log
-*.tmp
+
+# OS files
 .DS_Store
+*.tmp

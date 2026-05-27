@@ -34,8 +34,12 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 ############################
 FROM docker.1ms.run/alpine:3.18
 
-COPY --from=builder /go/bin/app /app
+# 使用非 root 用户运行，遵循安全最佳实践
+RUN adduser -D -u 1000 appuser
 
-USER root:root
+COPY --from=builder /go/bin/app /app
+COPY config/ /config/
+
+USER appuser:appuser
 
 ENTRYPOINT ["/app"]

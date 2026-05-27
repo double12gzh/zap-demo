@@ -3,6 +3,7 @@ package logger
 // LogLevel 定义日志级别类型
 type LogLevel string
 
+// Supported log levels for the logger configuration.
 const (
 	LogLevelDebug LogLevel = "debug"
 	LogLevelInfo  LogLevel = "info"

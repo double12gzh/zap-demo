@@ -1,7 +1,9 @@
+// Package demo provides example usage patterns for the logger library.
 package demo
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -9,13 +11,19 @@ import (
 	ilogger "github.com/double12gzh/zap-demo/logger"
 )
 
+// L is the logger instance used for singleton verification.
 var L *ilogger.Logger
 
+var createOnce sync.Once
+
+// CreateL initializes L with the global logger (safe for concurrent use).
 func CreateL() {
-	L = ilogger.GetLogger()
+	createOnce.Do(func() {
+		L = ilogger.GetLogger()
+	})
 }
 
-// OptimizedDemo 展示 myzaplog 的优化使用方式
+// Demo demonstrates optimized usage patterns for the zap-demo logger library.
 func Demo(ctx context.Context) {
 	// 通过全局  logger 新生成带有独特上下文的日志记录器
 	// logger := ilogger.GetLogger().WithField("func", "Demo")

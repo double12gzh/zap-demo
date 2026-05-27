@@ -42,7 +42,7 @@ func TestConcurrentPing(t *testing.T) {
 			// Create a new request
 			req, err := http.NewRequest("GET", "http://localhost:8080/ping", nil)
 			if err != nil {
-				errChan <- fmt.Errorf("failed to create request: %v", err)
+				errChan <- fmt.Errorf("failed to create request: %w", err)
 				return
 			}
 
@@ -56,10 +56,10 @@ func TestConcurrentPing(t *testing.T) {
 			// Send request
 			resp, err := client.Do(req)
 			if err != nil {
-				errChan <- fmt.Errorf("request failed: %v", err)
+				errChan <- fmt.Errorf("request failed: %w", err)
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// Check response status
 			if resp.StatusCode != http.StatusOK {

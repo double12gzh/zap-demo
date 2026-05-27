@@ -83,7 +83,7 @@ clean-cache: ## 清除 Docker 构建缓存
 .PHONY: test
 test: ## 运行测试 (用法: make test TEST_FUNC=TestConcurrentPing)
 	@printf ">> ${COLOR_CYAN}Running tests for function: ${COLOR_YELLOW}%s${COLOR_RESET}\n" "$(TEST_FUNC)"
-	go test -v -count=1 -cover $(PKG) -gcflags="all=-N -l" -run $(TEST_FUNC)
+	go test -v -race -count=1 -cover $(PKG) -gcflags="all=-N -l" -run $(TEST_FUNC)
 	@printf ">> ✅ ${COLOR_GREEN}Tests passed${COLOR_RESET}\n"
 
 # --------------------------
@@ -93,8 +93,8 @@ fmt: ## 格式化代码（go fmt）
 
 # --------------------------
 .PHONY: imports
-imports: ## 使用 goimports 自动组织 import 和格式化代码
-	goimports -w $(GOFILES)
+imports: ## 使用 gci 自动整理 import 三段式顺序
+	go run github.com/daixiang0/gci@v0.13.4 write -s standard -s default -s "prefix(github.com/double12gzh/zap-demo)" --custom-order $(GOFILES)
 
 # --------------------------
 .PHONY: lint

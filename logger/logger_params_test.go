@@ -16,8 +16,7 @@ import (
 // TestLogRotationParams 测试日志轮转参数是否生效
 func TestLogRotationParams(t *testing.T) {
 	// 创建临时目录用于测试
-	// tempDir := t.TempDir()
-	tempDir := "logs"
+	tempDir := t.TempDir()
 
 	tests := []struct {
 		name       string

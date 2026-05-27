@@ -54,3 +54,9 @@ issues:
   exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-rules:
+    # Example packages use underscores in names for readability
+    - path: "example/"
+      linters:
+        - revive
+      text: "var-naming.*underscore in package name"

@@ -1,3 +1,4 @@
+// Package singleton verifies that the logger maintains a single global instance.
 package singleton
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/double12gzh/zap-demo/example/demo_context"
 )
 
+// CheckSingleton verifies that demo.L and demo_context.L are the same instance.
 func CheckSingleton() {
 	// 先调用它们的初始化函数，确保真正获取到 Logger 实例而不再是 nil
 	demo.CreateL()
