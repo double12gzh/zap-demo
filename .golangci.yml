@@ -1,0 +1,56 @@
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck      # checks for unchecked errors
+    - gosimple      # simplifies code structure
+    - govet         # reports suspicious constructs
+    - ineffassign   # detects unused assignments
+    - staticcheck   # performs advanced static analysis checks
+    - unused        # checks for unused constants, variables, functions, and types
+    - gofmt         # checks if code is formatted
+    - gosec         # checks for security vulnerabilities
+    - misspell      # finds commonly misspelled English words in comments
+    - gci           # controls go imports ordering and grouping
+    - errorlint     # checks for correct error wrapping and comparison
+    - makezero      # checks for slice allocations with non-zero length and append
+    - prealloc      # checks for slices that could be preallocated
+    - gocritic      # checks for code style and performance issues
+    - revive        # drop-in replacement for golint with style rules
+
+linters-settings:
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment # too pedantic
+  gosec:
+    severity: "low"
+    confidence: "low"
+  goimports:
+    local-prefixes: github.com/double12gzh/zap-demo
+  gci:
+    sections:
+      - standard # standard library packages
+      - default # third-party packages
+      - prefix(github.com/double12gzh/zap-demo) # current package local imports
+    custom-order: true
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+        disabled: false
+      - name: var-naming
+        severity: warning
+        disabled: false
+      - name: package-comments
+        severity: warning
+        disabled: false
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -13,7 +13,13 @@ func StoreFieldsInContext(ctx context.Context, fields ...zap.Field) context.Cont
 		ctx = context.Background()
 	}
 	existingFields := GetFieldsFromContext(ctx)
-	return context.WithValue(ctx, ctxLogFieldsKey{}, append(existingFields, fields...))
+
+	// Create a new slice to prevent slice capacity sharing data races across branched goroutines
+	newFields := make([]zap.Field, len(existingFields)+len(fields))
+	copy(newFields, existingFields)
+	copy(newFields[len(existingFields):], fields)
+
+	return context.WithValue(ctx, ctxLogFieldsKey{}, newFields)
 }
 
 func GetFieldsFromContext(ctx context.Context) []zap.Field {

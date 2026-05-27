@@ -4,7 +4,7 @@ APP_NAME := myapp
 VERSION  := latest
 IMAGE    := $(APP_NAME):$(VERSION)
 BINARY   := app
-ENTRY    ?= ./cmd/main.go
+ENTRY    ?= ./cmd/zap-demo/main.go
 TEST_FUNC ?= .*  # 默认运行所有测试
 
 # 可配置变量
@@ -108,4 +108,3 @@ format: fmt imports ## 一键格式化所有内容
 # --------------------------
 .PHONY: check
 check: fmt imports lint ## 一键检查所有问题
-

@@ -1,0 +1,41 @@
+# Binaries and Templates
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with Lit
+*.out
+*.prof
+*.cov
+
+# Project-specific logs and binaries
+logs/
+bin/
+*.log
+
+# Dependency directories (only needed if you use vendor)
+# vendor/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

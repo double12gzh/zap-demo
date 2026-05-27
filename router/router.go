@@ -7,8 +7,7 @@ import (
 
 	"github.com/double12gzh/zap-demo/example/demo"
 	"github.com/double12gzh/zap-demo/example/singleton"
-	"github.com/double12gzh/zap-demo/logger"
-	"github.com/double12gzh/zap-demo/router/middleware"
+	"github.com/double12gzh/zap-demo/logger/middleware/gin"
 )
 
 // Response represents a generic API response
@@ -23,14 +22,7 @@ func ServHTTP() {
 	r := gin.Default()
 
 	// Add RequestID middleware
-	r.Use(middleware.RequestIDMiddleware())
-
-	// Start logger sync goroutine after logger is initialized
-	go func() {
-		for {
-			_ = logger.GetLogger().Sync()
-		}
-	}()
+	r.Use(ginlogger.RequestIDMiddleware())
 
 	r.GET("/ping", func(c *gin.Context) {
 		demo.Demo(c.Request.Context())

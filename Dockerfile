@@ -27,7 +27,7 @@ COPY . .
 
 # 编译程序，使用构建缓存
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    go build -o /go/bin/app ./main.go
+    go build -o /go/bin/app ./cmd/zap-demo/main.go
 
 ############################
 # STAGE 2: Minimal run image
@@ -39,4 +39,3 @@ COPY --from=builder /go/bin/app /app
 USER root:root
 
 ENTRYPOINT ["/app"]
-

@@ -137,10 +137,10 @@ func TestMaxAgeParameter(t *testing.T) {
 	require.NotNil(t, logger)
 
 	// 写入日志触发轮转
-	for i := 0; i < 2000; i++ {
+	for i := 0; i < 8000; i++ {
 		logger.Info("测试maxAge参数",
 			zap.String("index", strconv.Itoa(i)),
-			zap.String("message", strings.Repeat("B", 100)),
+			zap.String("message", strings.Repeat("B", 150)),
 		)
 	}
 
@@ -320,10 +320,10 @@ func TestCompressionParameter(t *testing.T) {
 			require.NotNil(t, logger)
 
 			// 写入日志触发轮转
-			for i := 0; i < 3000; i++ {
+			for i := 0; i < 8000; i++ {
 				logger.Info(tt.expected,
 					zap.String("index", strconv.Itoa(i)),
-					zap.String("message", strings.Repeat("E", 120)),
+					zap.String("message", strings.Repeat("E", 150)),
 				)
 			}
 
@@ -368,7 +368,7 @@ func findBackupFiles(t *testing.T, baseFilename string) []string {
 			filename := entry.Name()
 			// 匹配备份文件模式：name.ext.1, name.ext.2.gz 等
 			if strings.HasPrefix(filename, name) &&
-				strings.HasSuffix(filename, ext) &&
+				(strings.HasSuffix(filename, ext) || strings.HasSuffix(filename, ext+".gz")) &&
 				filename != base {
 				backupFiles = append(backupFiles, filepath.Join(dir, filename))
 			}

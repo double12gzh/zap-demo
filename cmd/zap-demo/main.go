@@ -1,3 +1,4 @@
+// Package main is the entrypoint for the zap-demo HTTP Web Server.
 package main
 
 import (
@@ -14,6 +15,9 @@ func main() {
 	if err := logger.InitLoggerFromYaml("config/log.yaml"); err != nil {
 		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
 	}
+	defer func() {
+		_ = logger.GetLogger().Close()
+	}()
 
 	// Start HTTP server after logger is initialized
 	router.ServHTTP()

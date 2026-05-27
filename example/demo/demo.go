@@ -65,7 +65,7 @@ func subDemo(ctx context.Context) {
 
 	// 直接调用包级别的日志函数
 	ilogger.Infof(ctx, "Hello %s", "world")
-	ilogger.Errorf(ctx, "I'am wrong", "asf")
+	ilogger.Errorf(ctx, "I'am wrong: %s", "asf")
 	ilogger.Warnf(ctx, "I'am warn")
 	ilogger.Warn(ctx, "asfdsadfasdfsadfsadfsadf")
 }

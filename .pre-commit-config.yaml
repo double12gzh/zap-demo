@@ -1,0 +1,48 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        name: 格式化 - 移除行尾空格
+      - id: end-of-file-fixer
+        name: 格式化 - 确保文件以换行符结尾
+      - id: check-yaml
+        name: 安全性 - 检查 YAML 语法
+      - id: check-added-large-files
+        name: 安全性 - 检查大文件提交
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.59.1
+    hooks:
+      - id: golangci-lint
+        name: 静态检查 - golangci-lint run
+        entry: golangci-lint run --new-from-rev=HEAD~1
+        types: [go]
+        language: system
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: gci
+        name: 格式化 - gci (自动整理 import 三段式顺序)
+        # 使用 go run 方式无需开发者提前手动安装 gci，Go 会自动下载并运行
+        entry: go run github.com/daixiang0/gci@v0.13.4 write -s standard -s default -s prefix(github.com/double12gzh/zap-demo) --custom-order
+        language: system
+        files: \.go$
+        pass_filenames: true
+
+      - id: go-fmt
+        name: 格式化 - go fmt
+        entry: go fmt ./...
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+      - id: go-mod-tidy
+        name: 依赖检查 - go mod tidy
+        entry: go mod tidy
+        language: system
+        files: \.go$
+        pass_filenames: false

@@ -1,4 +1,4 @@
-package demo
+package demo_test
 
 import (
 	"fmt"
@@ -7,10 +7,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/double12gzh/zap-demo/router/middleware"
+	"github.com/double12gzh/zap-demo/logger"
+	"github.com/double12gzh/zap-demo/logger/middleware/gin"
+	"github.com/double12gzh/zap-demo/router"
 )
 
+var startServerOnce sync.Once
+
 func TestConcurrentPing(t *testing.T) {
+	startServerOnce.Do(func() {
+		// Initialize logger with default config for testing
+		_ = logger.InitLogger(nil)
+		go router.ServHTTP()
+		// Give the server a moment to start
+		time.Sleep(200 * time.Millisecond)
+	})
+
 	// Number of concurrent requests
 	numRequests := 10
 	var wg sync.WaitGroup
@@ -34,7 +46,7 @@ func TestConcurrentPing(t *testing.T) {
 				return
 			}
 
-			req.Header.Set(middleware.RequestIDHeader, traceID)
+			req.Header.Set(ginlogger.DefaultRequestIDHeader, traceID)
 
 			// Create HTTP client with timeout
 			client := &http.Client{

@@ -31,11 +31,17 @@ func LoadConfigFromYaml(configPath string) (*Config, error) {
 	return config, nil
 }
 
-// InitLoggerFromYaml initializes the logger from a YAML configuration file
+// InitLoggerFromYaml initializes the logger from a YAML configuration file.
+// If configPath is empty or the file does not exist, it falls back to the default config.
 func InitLoggerFromYaml(configPath string) error {
+	if configPath == "" {
+		return InitLogger(nil)
+	}
+
 	// Ensure the config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return fmt.Errorf("config file not found: %s", configPath)
+		// Fallback to default configuration instead of failing
+		return InitLogger(nil)
 	}
 
 	// Load configuration from YAML

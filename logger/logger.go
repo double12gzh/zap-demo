@@ -35,12 +35,6 @@ const (
 var (
 	once   sync.Once
 	logger *Logger
-	// Add a pool for Logger instances
-	loggerPool = sync.Pool{
-		New: func() any {
-			return &Logger{}
-		},
-	}
 )
 
 type loggerKey struct{}
@@ -53,8 +47,10 @@ func NewContextWithValue(ctx context.Context, l *Logger) context.Context {
 // FromContext returns the logger from the context.
 // If no logger is found, it returns the global default logger.
 func FromContext(ctx context.Context) *Logger {
-	if l, ok := ctx.Value(loggerKey{}).(*Logger); ok {
-		return l
+	if ctx != nil {
+		if l, ok := ctx.Value(loggerKey{}).(*Logger); ok {
+			return l
+		}
 	}
 	return GetLogger()
 }
@@ -76,17 +72,21 @@ type Config struct {
 	EnableAsync        bool     `json:"enable_async" yaml:"enable_async"`                 // enable async logging
 	AsyncBufferSize    int      `json:"async_buffer_size" yaml:"async_buffer_size"`       // async buffer size
 	AsyncFlushInterval int      `json:"async_flush_interval" yaml:"async_flush_interval"` // async flush interval in milliseconds
+	TraceKey           string   `json:"trace_key" yaml:"trace_key"`                       // trace id header/context key
 }
 
 // Logger
 type Logger struct {
 	config *Config
+	level  zap.AtomicLevel
 
 	fileCore      zapcore.Core
 	consoleCore   zapcore.Core
 	errorCore     zapcore.Core
 	logger        *zap.Logger
 	sugaredLogger *zap.SugaredLogger
+	stopAsync     chan struct{}
+	stopOnce      sync.Once
 }
 
 func InitLogger(config *Config) (err error) {
@@ -113,6 +113,8 @@ func NewLogger(config *Config) (*Logger, error) {
 		return nil, err
 	}
 
+	atomicLevel := zap.NewAtomicLevelAt(level)
+
 	// optimized encoder config
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:        timeKey,
@@ -134,6 +136,7 @@ func NewLogger(config *Config) (*Logger, error) {
 
 	l := &Logger{
 		config: c,
+		level:  atomicLevel,
 	}
 
 	var cores []zapcore.Core
@@ -150,7 +153,7 @@ func NewLogger(config *Config) (*Logger, error) {
 				Size: c.AsyncBufferSize,
 			}
 		}
-		l.fileCore = createLogCore(fileWriteSyncer, encoderConfig, level)
+		l.fileCore = createLogCore(fileWriteSyncer, encoderConfig, atomicLevel)
 		cores = append(cores, l.fileCore)
 	}
 
@@ -186,7 +189,7 @@ func NewLogger(config *Config) (*Logger, error) {
 		l.consoleCore = zapcore.NewCore(
 			zapcore.NewConsoleEncoder(consoleEncoderConfig),
 			consoleWriteSyncer,
-			level,
+			atomicLevel,
 		)
 		cores = append(cores, l.consoleCore)
 	}
@@ -210,6 +213,22 @@ func NewLogger(config *Config) (*Logger, error) {
 	l.logger = zap.New(core, opts...)
 	l.sugaredLogger = l.logger.Sugar()
 
+	if c.EnableAsync && c.AsyncFlushInterval > 0 {
+		l.stopAsync = make(chan struct{})
+		go func(lg *Logger, stop chan struct{}, interval int) {
+			ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					_ = lg.Sync()
+				case <-stop:
+					return
+				}
+			}
+		}(l, l.stopAsync, c.AsyncFlushInterval)
+	}
+
 	return l, nil
 }
 
@@ -231,6 +250,7 @@ func defaultConfig() *Config {
 		EnableAsync:        false,
 		AsyncBufferSize:    256 * 1024,
 		AsyncFlushInterval: 1000,
+		TraceKey:           "X-Request-Id",
 	}
 }
 
@@ -263,6 +283,9 @@ func mergeConfigWithDefault(cfg *Config) *Config {
 	if cfg.BufferSize == 0 {
 		cfg.BufferSize = def.BufferSize
 	}
+	if cfg.TraceKey == "" {
+		cfg.TraceKey = def.TraceKey
+	}
 	return cfg
 }
 
@@ -275,6 +298,22 @@ func (l *Logger) GetSugaredLogger() *zap.SugaredLogger {
 	return l.sugaredLogger
 }
 
+// Config returns the logger configuration
+func (l *Logger) Config() *Config {
+	return l.config
+}
+
+// SetLevel dynamically changes the log level thread-safely
+func (l *Logger) SetLevel(lvl LogLevel) error {
+	parsedLevel, err := zapcore.ParseLevel(lvl.String())
+	if err != nil {
+		return err
+	}
+	l.level.SetLevel(parsedLevel)
+	l.config.Level = lvl
+	return nil
+}
+
 // WithFields add fields to logger
 func (l *Logger) WithFields(fields ...zap.Field) *Logger {
 	if len(fields) == 0 {
@@ -282,15 +321,15 @@ func (l *Logger) WithFields(fields ...zap.Field) *Logger {
 	}
 
 	newLogger := l.logger.With(fields...)
-	// Get a Logger instance from pool
-	newL := loggerPool.Get().(*Logger)
-	newL.logger = newLogger
-	newL.sugaredLogger = newLogger.Sugar()
-	newL.config = l.config
-	newL.fileCore = l.fileCore
-	newL.consoleCore = l.consoleCore
-	newL.errorCore = l.errorCore
-	return newL
+	return &Logger{
+		config:        l.config,
+		level:         l.level,
+		fileCore:      l.fileCore,
+		consoleCore:   l.consoleCore,
+		errorCore:     l.errorCore,
+		logger:        newLogger,
+		sugaredLogger: newLogger.Sugar(),
+	}
 }
 
 // WithFieldsMap add fields from map to logger
@@ -364,9 +403,12 @@ func (l *Logger) Sync() error {
 
 // Close sync and close the logger
 func (l *Logger) Close() error {
+	l.stopOnce.Do(func() {
+		if l.stopAsync != nil {
+			close(l.stopAsync)
+		}
+	})
 	err := l.Sync()
-	// Put the Logger instance back to pool
-	loggerPool.Put(l)
 	// Ignore sync errors for os.Stdout and os.Stderr
 	if err != nil && (strings.Contains(err.Error(), "invalid argument") || strings.Contains(err.Error(), "/dev/stdout")) {
 		return nil
@@ -409,7 +451,7 @@ func createLogWriter(filename string, config *Config) (zapcore.WriteSyncer, erro
 }
 
 // createLogCore create a log core
-func createLogCore(writer zapcore.WriteSyncer, encoderConfig zapcore.EncoderConfig, level zapcore.Level) zapcore.Core {
+func createLogCore(writer zapcore.WriteSyncer, encoderConfig zapcore.EncoderConfig, level zapcore.LevelEnabler) zapcore.Core {
 	return zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderConfig),
 		writer,
@@ -417,36 +459,44 @@ func createLogCore(writer zapcore.WriteSyncer, encoderConfig zapcore.EncoderConf
 	)
 }
 
+// Info logs a message at InfoLevel using the Logger extracted from Context.
 func Info(ctx context.Context, msg string, fields ...zap.Field) {
-	FromContext(ctx).logger.Info(msg, fields...)
+	FromContext(ctx).logger.WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
 }
 
+// Debug logs a message at DebugLevel using the Logger extracted from Context.
 func Debug(ctx context.Context, msg string, fields ...zap.Field) {
-	FromContext(ctx).logger.Debug(msg, fields...)
+	FromContext(ctx).logger.WithOptions(zap.AddCallerSkip(1)).Debug(msg, fields...)
 }
 
+// Warn logs a message at WarnLevel using the Logger extracted from Context.
 func Warn(ctx context.Context, msg string, fields ...zap.Field) {
-	FromContext(ctx).logger.Warn(msg, fields...)
+	FromContext(ctx).logger.WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
 }
 
+// Error logs a message at ErrorLevel using the Logger extracted from Context.
 func Error(ctx context.Context, msg string, fields ...zap.Field) {
-	FromContext(ctx).logger.Error(msg, fields...)
+	FromContext(ctx).logger.WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
 }
 
+// Infof formats and logs a message at InfoLevel using the Logger extracted from Context.
 func Infof(ctx context.Context, template string, args ...any) {
 	// 创建一个带有正确 callerSkip 的 logger
 	// 使用原始的 zap logger 而不是 sugared logger，这样可以更好地控制 caller 信息
-	FromContext(ctx).logger.Info(fmt.Sprintf(template, args...))
+	FromContext(ctx).logger.WithOptions(zap.AddCallerSkip(1)).Info(fmt.Sprintf(template, args...))
 }
 
+// Debugf formats and logs a message at DebugLevel using the Logger extracted from Context.
 func Debugf(ctx context.Context, template string, args ...any) {
-	FromContext(ctx).logger.Debug(fmt.Sprintf(template, args...))
+	FromContext(ctx).logger.WithOptions(zap.AddCallerSkip(1)).Debug(fmt.Sprintf(template, args...))
 }
 
+// Warnf formats and logs a message at WarnLevel using the Logger extracted from Context.
 func Warnf(ctx context.Context, template string, args ...any) {
-	FromContext(ctx).logger.Warn(fmt.Sprintf(template, args...))
+	FromContext(ctx).logger.WithOptions(zap.AddCallerSkip(1)).Warn(fmt.Sprintf(template, args...))
 }
 
+// Errorf formats and logs a message at ErrorLevel using the Logger extracted from Context.
 func Errorf(ctx context.Context, template string, args ...any) {
-	FromContext(ctx).logger.Error(fmt.Sprintf(template, args...))
+	FromContext(ctx).logger.WithOptions(zap.AddCallerSkip(1)).Error(fmt.Sprintf(template, args...))
 }
