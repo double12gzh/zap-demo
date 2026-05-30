@@ -13,18 +13,15 @@ repos:
       - id: check-added-large-files
         name: 安全性 - 检查大文件提交
 
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.59.1
+  - repo: local
     hooks:
       - id: golangci-lint
         name: 静态检查 - golangci-lint run
-        entry: golangci-lint run --new-from-rev=HEAD~1
+        entry: go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5 run
         types: [go]
         language: system
         pass_filenames: false
 
-  - repo: local
-    hooks:
       - id: gci
         name: 格式化 - gci (自动整理 import 三段式顺序)
         # 使用 go run 方式无需开发者提前手动安装 gci，Go 会自动下载并运行

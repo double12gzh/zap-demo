@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/double12gzh/zap-demo/logger"
-	"github.com/double12gzh/zap-demo/logger/middleware/gin"
+	ginlogger "github.com/double12gzh/zap-demo/logger/middleware/gin"
 	"github.com/double12gzh/zap-demo/router"
 )
 

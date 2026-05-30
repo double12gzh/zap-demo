@@ -49,13 +49,18 @@ func NewContextWithValue(ctx context.Context, l *Logger) context.Context {
 
 // FromContext returns the logger from the context.
 // If no logger is found, it returns the global default logger.
+// It automatically extracts context-scoped fields using WithContext.
 func FromContext(ctx context.Context) *Logger {
+	var l *Logger
 	if ctx != nil {
-		if l, ok := ctx.Value(loggerKey{}).(*Logger); ok {
-			return l
+		if val, ok := ctx.Value(loggerKey{}).(*Logger); ok {
+			l = val
 		}
 	}
-	return GetLogger()
+	if l == nil {
+		l = GetLogger()
+	}
+	return l.WithContext(ctx)
 }
 
 // Config log config
@@ -179,7 +184,6 @@ func NewLogger(config *Config) (*Logger, error) {
 		consoleEncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
 		consoleWriteSyncer := zapcore.AddSync(os.Stdout)
-		consoleWriteSyncer = wrapWriteSyncer(consoleWriteSyncer, c)
 
 		l.consoleCore = zapcore.NewCore(
 			zapcore.NewConsoleEncoder(consoleEncoderConfig),
