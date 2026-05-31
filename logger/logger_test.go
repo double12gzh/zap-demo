@@ -59,6 +59,7 @@ func TestLoggerWithFields(t *testing.T) {
 	}
 	logWithFields := log.WithFields(fields...)
 	assert.NotNil(t, logWithFields)
+	assert.NotNil(t, logWithFields.pkgLogger, "pkgLogger should be set on child logger")
 
 	// Test WithFieldsMap
 	fieldsMap := map[string]any{
@@ -67,6 +68,20 @@ func TestLoggerWithFields(t *testing.T) {
 	}
 	logWithFieldsMap := log.WithFieldsMap(fieldsMap)
 	assert.NotNil(t, logWithFieldsMap)
+}
+
+func TestLoggerNamed(t *testing.T) {
+	ResetForTesting(t)
+
+	config := defaultConfig()
+	err := InitLogger(config)
+	require.NoError(t, err)
+
+	log := GetLogger()
+	named := log.Named("db")
+	assert.NotNil(t, named)
+	assert.NotNil(t, named.pkgLogger, "pkgLogger should be set on named logger")
+	named.Info("named logger test")
 }
 
 func TestLoggerContext(t *testing.T) {
@@ -83,6 +98,12 @@ func TestLoggerContext(t *testing.T) {
 	ctxWithLogger := NewContextWithValue(ctx, log)
 	loggerFromCtx := FromContext(ctxWithLogger)
 	assert.NotNil(t, loggerFromCtx)
+
+	// Test that FromContext with an empty context still returns the global logger without panic
+	assert.NotPanics(t, func() {
+		l := FromContext(context.TODO())
+		assert.NotNil(t, l)
+	})
 
 	// Test context with fields
 	fields := []zap.Field{
@@ -241,7 +262,7 @@ func TestCloseAndWrite(t *testing.T) {
 	config := &Config{
 		Level:    LogLevelInfo,
 		Filename: filepath.Join(tempDir, "close_test.log"),
-		Console:  false,
+		Console:  BoolPtr(false),
 	}
 	err := InitLogger(config)
 	require.NoError(t, err)
@@ -267,8 +288,8 @@ func TestErrorFileOnlyErrors(t *testing.T) {
 		Level:         LogLevelDebug,
 		Filename:      filepath.Join(tempDir, "all.log"),
 		ErrorFilename: filepath.Join(tempDir, "error.log"),
-		Console:       false,
-		BufferSize:    0, // disable buffering so writes are immediate
+		Console:       BoolPtr(false),
+		BufferSize:    DisableBuffer, // disable buffering so writes are immediate
 	}
 
 	l, err := NewLogger(config)
@@ -306,4 +327,51 @@ func TestErrorFileOnlyErrors(t *testing.T) {
 	assert.Contains(t, allLogContent, "error msg")
 
 	_ = l.Close()
+}
+
+// TestDisableBuffer verifies that DisableBuffer sentinel disables buffering.
+func TestDisableBuffer(t *testing.T) {
+	tempDir := t.TempDir()
+	config := &Config{
+		Level:      LogLevelInfo,
+		Filename:   filepath.Join(tempDir, "nobuf.log"),
+		Console:    BoolPtr(false),
+		BufferSize: DisableBuffer,
+	}
+
+	l, err := NewLogger(config)
+	require.NoError(t, err)
+	defer func() { _ = l.Close() }()
+
+	l.Info("immediate write")
+
+	// File should have content without explicit Sync
+	data, err := os.ReadFile(config.Filename) //nolint:gosec
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "immediate write")
+}
+
+// TestWriter verifies that the io.Writer adapter emits logs correctly.
+func TestWriter(t *testing.T) {
+	ResetForTesting(t)
+
+	tempDir := t.TempDir()
+	config := &Config{
+		Level:      LogLevelInfo,
+		Filename:   filepath.Join(tempDir, "writer.log"),
+		Console:    BoolPtr(false),
+		BufferSize: DisableBuffer,
+	}
+	err := InitLogger(config)
+	require.NoError(t, err)
+
+	log := GetLogger()
+	w := log.Writer()
+	_, err = w.Write([]byte("from io.Writer\n"))
+	require.NoError(t, err)
+	_ = log.Sync()
+
+	data, err := os.ReadFile(config.Filename) //nolint:gosec
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "from io.Writer")
 }

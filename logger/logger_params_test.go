@@ -58,8 +58,8 @@ func TestLogRotationParams(t *testing.T) {
 				MaxSize:       tt.maxSize,
 				MaxBackups:    tt.maxBackups,
 				MaxAge:        tt.maxAge,
-				Compress:      false,
-				Console:       false, // 关闭控制台输出，只测试文件
+				Compress:      BoolPtr(false),
+				Console:       BoolPtr(false), // 关闭控制台输出，只测试文件
 			}
 
 			// 初始化日志器
@@ -126,8 +126,8 @@ func TestMaxAgeParameter(t *testing.T) {
 		MaxSize:       1, // 1MB，容易触发轮转
 		MaxBackups:    5,
 		MaxAge:        1, // 1天
-		Compress:      true,
-		Console:       false,
+		Compress:      BoolPtr(true),
+		Console:       BoolPtr(false),
 	}
 
 	// 初始化日志器
@@ -175,8 +175,8 @@ func TestMaxBackupsParameter(t *testing.T) {
 				MaxSize:       1, // 1MB，容易触发轮转
 				MaxBackups:    maxBackups,
 				MaxAge:        30,
-				Compress:      true,
-				Console:       false,
+				Compress:      BoolPtr(true),
+				Console:       BoolPtr(false),
 			}
 
 			// 初始化日志器
@@ -228,8 +228,8 @@ func TestMaxSizeParameter(t *testing.T) {
 				MaxSize:       maxSize,
 				MaxBackups:    5,
 				MaxAge:        30,
-				Compress:      true,
-				Console:       false,
+				Compress:      BoolPtr(true),
+				Console:       BoolPtr(false),
 			}
 
 			// 初始化日志器
@@ -309,8 +309,8 @@ func TestCompressionParameter(t *testing.T) {
 				MaxSize:       1, // 1MB，容易触发轮转
 				MaxBackups:    3,
 				MaxAge:        30,
-				Compress:      tt.compress,
-				Console:       false,
+				Compress:      BoolPtr(tt.compress),
+				Console:       BoolPtr(false),
 			}
 
 			// 初始化日志器
